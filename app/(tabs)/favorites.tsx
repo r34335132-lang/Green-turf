@@ -1,54 +1,60 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
-import {
-  FlatList,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ProductCard } from "@/components/catalog/ProductCard";
+import { Product, getProducts } from "@/data/products";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useColors } from "@/hooks/useColors";
+import ProductCard from "@/components/catalog/ProductCard";
 
 export default function FavoritesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { favorites } = useFavorites();
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" />
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Favoritos</Text>
-        <Text style={[styles.count, { color: colors.mutedForeground }]}>
-          {favorites.length} {favorites.length === 1 ? "producto" : "productos"}
+  useEffect(() => {
+    async function loadData() {
+      const data = await getProducts();
+      setProducts(data || []);
+      setLoading(false);
+    }
+    loadData();
+  }, []);
+
+  const favoriteProducts = products.filter((p) => favorites.includes(p.id));
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (favoriteProducts.length === 0) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <Feather name="heart" size={64} color={colors.border} />
+        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+          Aún no tienes pastos favoritos.
         </Text>
       </View>
+    );
+  }
 
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.foreground }]}>Mis Favoritos</Text>
+      </View>
       <FlatList
-        data={favorites}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={[
-          styles.list,
-          { paddingBottom: insets.bottom + 100 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <View style={[styles.emptyIcon, { backgroundColor: "rgba(109,190,0,0.1)" }]}>
-              <Feather name="heart" size={36} color={colors.primary} />
-            </View>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              Sin favoritos aún
-            </Text>
-            <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
-              Guardá los productos que más te gusten para verlos después
-            </Text>
-          </View>
-        }
+        data={favoriteProducts}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
         renderItem={({ item }) => <ProductCard product={item} />}
       />
     </View>
@@ -57,46 +63,9 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 4,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 32,
-    letterSpacing: -1,
-  },
-  count: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-  },
-  list: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  empty: {
-    alignItems: "center",
-    gap: 14,
-    paddingTop: 80,
-    paddingHorizontal: 32,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-    letterSpacing: -0.3,
-  },
-  emptyDesc: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
+  center: { justifyContent: "center", alignItems: "center" },
+  header: { padding: 20 },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28 },
+  list: { padding: 20, gap: 16 },
+  emptyText: { fontFamily: "Inter_500Medium", fontSize: 16, marginTop: 16 },
 });
