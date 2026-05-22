@@ -1,4 +1,5 @@
 // app/cart.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -13,75 +14,152 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { User } from "@supabase/supabase-js";
 
-import { useCart } from "@/context/CartContext";
+import { GuestContactModal, GuestContact } from "@/components/cart/GuestContactModal";
+import { APP_LIMITS, formatMoney, getProductPrice } from "@/constants/limits";
+import { getCartLineTotal, useCart } from "@/context/CartContext";
 import { useColors } from "@/hooks/useColors";
+import { QuoteContact } from "@/lib/leads";
+import { notifyStaffPush } from "@/lib/push";
 import { supabase } from "@/lib/supabase";
+
+const GUEST_CONTACT_KEY = "guest_quote_contact";
+
+async function loadSavedGuestContact(): Promise<Partial<GuestContact>> {
+  try {
+    const raw = await AsyncStorage.getItem(GUEST_CONTACT_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function saveGuestContact(contact: QuoteContact) {
+  await AsyncStorage.setItem(GUEST_CONTACT_KEY, JSON.stringify(contact));
+}
+
+async function resolveContactForQuote(user: User): Promise<QuoteContact | null> {
+  if (user.is_anonymous) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("first_name, last_name, phone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const fullName = profile
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+    : "";
+  const phone = profile?.phone?.trim() || "";
+  const email = user.email?.trim() || "";
+
+  if (fullName.length >= 2 && phone.length >= 8 && email.includes("@")) {
+    return { name: fullName, phone, email };
+  }
+  return null;
+}
 
 export default function CartScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { items, removeFromCart, totalAmount, clearCart } = useCart();
+  const { items, removeFromCart, totalPrice, clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [guestModalVisible, setGuestModalVisible] = useState(false);
+  const [guestInitial, setGuestInitial] = useState<Partial<GuestContact>>({});
 
-  // Función principal que envía la cotización a la base de datos
-  const handleRequestQuote = async () => {
-    if (items.length === 0) return;
+  const submitQuote = async (contact: QuoteContact) => {
     setIsSubmitting(true);
-
     try {
-      // 1. Obtener el usuario actual
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Debes iniciar sesión para cotizar.");
+      const batch = items.slice(0, APP_LIMITS.maxQuotesPerSubmit);
+      const quoteRequests = batch.map((item) => {
+        const lineTotal = getCartLineTotal(item);
+        return {
+          client_name: contact.name,
+          phone: contact.phone,
+          email: contact.email,
+          grass_type_id: item.product.id,
+          m2_requested: item.area,
+          status: "pendiente",
+          notes: `Cotización App. Material estimado: $${formatMoney(lineTotal)} (${item.area} m² × $${formatMoney(getProductPrice(item.product))}/m²)`,
+        };
+      });
 
-      // 2. Obtener el perfil del usuario (para saber su nombre)
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, phone")
-        .eq("id", user.id)
-        .single();
-
-      const fullName = profile 
-        ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() 
-        : "Cliente App";
-
-      // 3. Crear los registros para el CRM de Ventas (Uno por cada tipo de pasto en el carrito)
-      const quoteRequests = items.map((item) => ({
-        client_name: fullName,
-        phone: profile?.phone || "Sin teléfono registrado",
-        email: user.email,
-        grass_type_id: item.product.id,
-        m2_requested: item.area, // Los metros cuadrados que calculó
-        status: "pendiente",
-        notes: `Cotización solicitada desde la App Móvil. Costo estimado por material: $${(item.product.pricePerM2 * item.area).toFixed(2)}`,
-      }));
-
-      // 4. Insertar en la tabla de seguimiento (CRM)
       const { error: insertError } = await supabase
         .from("leads_tracking")
         .insert(quoteRequests);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("[Cart] leads_tracking insert:", insertError);
+        throw insertError;
+      }
 
-      // 5. Éxito: Limpiar carrito y avisar al cliente
+      await notifyStaffPush(
+        "Nueva cotización",
+        `${contact.name} solicitó cotización (${batch.length} producto(s))`
+      );
+
+      await saveGuestContact(contact);
+      setGuestModalVisible(false);
+
       Alert.alert(
-        "¡Cotización Solicitada!",
-        "Hemos recibido tu solicitud. Un asesor se pondrá en contacto contigo muy pronto para afinar detalles de instalación y entrega.",
+        "¡Cotización solicitada!",
+        "Recibimos tu solicitud. Un asesor te contactará pronto.",
         [
-          { 
-            text: "Entendido", 
+          {
+            text: "Entendido",
             onPress: () => {
               clearCart();
               router.back();
-            } 
-          }
+            },
+          },
         ]
       );
-
-    } catch (error: any) {
-      Alert.alert("Error al enviar", error.message);
+    } catch (error: unknown) {
+      const err = error as { message?: string; hint?: string };
+      const msg = err.message || "No se pudo enviar la cotización.";
+      const isRls = msg.includes("row-level security");
+      Alert.alert(
+        "Error al enviar",
+        isRls
+          ? `${msg}\n\nEjecuta supabase/leads-tracking-policies.sql en el SQL Editor de Supabase.`
+          : msg + (err.hint ? `\n\n${err.hint}` : "")
+      );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestQuote = async () => {
+    if (items.length === 0) return;
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        Alert.alert(
+          "Inicia sesión",
+          "Entra como invitado o con tu cuenta para solicitar una cotización.",
+          [{ text: "Ir a login", onPress: () => router.push("/(auth)/login") }]
+        );
+        return;
+      }
+
+      const contact = await resolveContactForQuote(user);
+      if (contact) {
+        await submitQuote(contact);
+        return;
+      }
+
+      const saved = await loadSavedGuestContact();
+      setGuestInitial({
+        name: saved.name || "",
+        phone: saved.phone || "",
+        email: saved.email || user.email || "",
+      });
+      setGuestModalVisible(true);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      Alert.alert("Error", err.message || "No se pudo continuar.");
     }
   };
 
@@ -113,6 +191,14 @@ export default function CartScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <GuestContactModal
+        visible={guestModalVisible}
+        initial={guestInitial}
+        loading={isSubmitting}
+        onClose={() => !isSubmitting && setGuestModalVisible(false)}
+        onSubmit={submitQuote}
+      />
+
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="x" size={24} color={colors.foreground} />
@@ -131,7 +217,7 @@ export default function CartScreen() {
                 Área a cubrir: {item.area} m²
               </Text>
               <Text style={[styles.itemPrice, { color: colors.primary }]}>
-                Estimado: ${(item.product.pricePerM2 * item.area).toFixed(2)}
+                Estimado: ${formatMoney(getCartLineTotal(item))}
               </Text>
             </View>
             <Pressable onPress={() => removeFromCart(item.product.id)} style={styles.removeBtn}>
@@ -141,13 +227,12 @@ export default function CartScreen() {
         ))}
       </ScrollView>
 
-      {/* Footer Fijo con el Botón de Cotizar */}
       <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.totalRow}>
           <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Costo estimado de material</Text>
-          <Text style={[styles.totalAmount, { color: colors.foreground }]}>${totalAmount.toFixed(2)}</Text>
+          <Text style={[styles.totalAmount, { color: colors.foreground }]}>${formatMoney(totalPrice)}</Text>
         </View>
-        
+
         <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
           * El total mostrado es un estimado del material. La instalación y el envío se cotizarán por separado.
         </Text>

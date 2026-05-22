@@ -14,8 +14,12 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { StaffToastBanner } from "@/components/admin/StaffToastBanner";
+import { ClientToastBanner } from "@/components/client/ClientToastBanner";
 import { CartProvider } from "@/context/CartContext";
+import { ClientNotificationsProvider } from "@/context/ClientNotificationsContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { StaffNotificationsProvider } from "@/context/StaffNotificationsContext";
 import { supabase } from "@/lib/supabase"; // <-- Importamos Supabase
 
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +60,8 @@ function RootLayoutNav() {
           presentation: "modal",
         }}
       />
+      <Stack.Screen name="notifications" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="maintenance-request" options={{ headerShown: false, presentation: "modal" }} />
     </Stack>
   );
 }
@@ -107,11 +113,17 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <CartProvider>
             <FavoritesProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
+              <StaffNotificationsProvider>
+                <ClientNotificationsProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <KeyboardProvider>
+                      <StaffToastBanner />
+                      <ClientToastBanner />
+                      <RootLayoutNav />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </ClientNotificationsProvider>
+              </StaffNotificationsProvider>
             </FavoritesProvider>
           </CartProvider>
         </QueryClientProvider>

@@ -9,10 +9,13 @@ import React, {
 
 import { Product } from "@/data/products";
 
+const STORAGE_KEY = "favorite_product_ids";
+
 interface FavoritesContextType {
-  favorites: Product[];
+  favoriteIds: string[];
   isFavorite: (id: string) => boolean;
   toggleFavorite: (product: Product) => void;
+  isLoaded: boolean;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(
@@ -20,34 +23,67 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(
 );
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  const [favorites, setFavorites] = useState<Product[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem("favorites").then((data) => {
-      if (data) setFavorites(JSON.parse(data));
-    });
+    (async () => {
+      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            setFavoriteIds(parsed.filter((id): id is string => typeof id === "string"));
+          }
+        } catch {
+          setFavoriteIds([]);
+        }
+      } else {
+        const legacy = await AsyncStorage.getItem("favorites");
+        if (legacy) {
+          try {
+            const parsed = JSON.parse(legacy);
+            if (Array.isArray(parsed)) {
+              const ids = parsed
+                .map((item) => (typeof item === "string" ? item : item?.id))
+                .filter((id): id is string => typeof id === "string");
+              setFavoriteIds(ids);
+              await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+              await AsyncStorage.removeItem("favorites");
+            }
+          } catch {
+            setFavoriteIds([]);
+          }
+        }
+      }
+      setIsLoaded(true);
+    })();
+  }, []);
+
+  const persist = useCallback((ids: string[]) => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
   }, []);
 
   const isFavorite = useCallback(
-    (id: string) => favorites.some((f) => f.id === id),
-    [favorites]
+    (id: string) => favoriteIds.includes(id),
+    [favoriteIds]
   );
 
   const toggleFavorite = useCallback(
     (product: Product) => {
-      setFavorites((prev) => {
-        const next = prev.some((f) => f.id === product.id)
-          ? prev.filter((f) => f.id !== product.id)
-          : [...prev, product];
-        AsyncStorage.setItem("favorites", JSON.stringify(next));
+      setFavoriteIds((prev) => {
+        const next = prev.includes(product.id)
+          ? prev.filter((id) => id !== product.id)
+          : [...prev, product.id];
+        persist(next);
         return next;
       });
     },
-    []
+    [persist]
   );
 
   return (
-    <FavoritesContext.Provider value={{ favorites, isFavorite, toggleFavorite }}>
+    <FavoritesContext.Provider value={{ favoriteIds, isFavorite, toggleFavorite, isLoaded }}>
       {children}
     </FavoritesContext.Provider>
   );

@@ -13,12 +13,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
+import { useClientNotifications } from "@/context/ClientNotificationsContext";
+import { useStaffNotifications } from "@/context/StaffNotificationsContext";
+import { promptPushPermissionAgain } from "@/hooks/usePushOnLogin";
 import { useColors } from "@/hooks/useColors";
+import { fetchMyProfile, isStaffRole, roleLabel } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
 
 const BASE_MENU_ITEMS = [
   { icon: "shopping-bag", label: "Mis pedidos", sub: "Ver historial" },
-  { icon: "calculator", label: "Calculadora", sub: "Calculá tu área", route: "/calculator" },
+  { icon: "grid", label: "Calculadora", sub: "Calculá tu área", route: "/calculator" },
   { icon: "calendar", label: "Agendar instalación", sub: "Coordinar con un especialista" },
   { icon: "message-circle", label: "Chat de asesoría", sub: "Consultá con expertos" },
   { icon: "help-circle", label: "Preguntas frecuentes", sub: "Resolvé tus dudas" },
@@ -29,7 +33,9 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { totalItems, totalPrice } = useCart();
-  const { favorites } = useFavorites();
+  const { favoriteIds } = useFavorites();
+  const { unreadCount, refreshUnread } = useStaffNotifications();
+  const { unreadCount: clientUnread, refreshUnread: refreshClientUnread } = useClientNotifications();
 
   const [user, setUser] = useState<any>(null);
   const [profileName, setProfileName] = useState("Cargando...");
@@ -41,49 +47,36 @@ export default function ProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      if (user) {
-        if (!user.is_anonymous) {
-          // Leer los datos DIRECTAMENTE de la tabla que tú editas (profiles)
-          const { data } = await supabase
-            .from("profiles")
-            .select("first_name, last_name, role")
-            .eq("id", user.id)
-            .single();
+      if (!user) return;
 
-          if (data) {
-            // 1. Asignar el Nombre
-            if (data.first_name) {
-              setProfileName(`${data.first_name} ${data.last_name || ""}`);
-            } else {
-              setProfileName(user.email || "Usuario");
-            }
+      if (user.is_anonymous) {
+        setProfileName("Invitado");
+        setUserRole("Temporal");
+        setIsAdmin(false);
+        return;
+      }
 
-            // 2. Asignar el Rol basado en la base de datos (public.profiles)
-            const dbRole = data.role || "cliente";
-            if (dbRole === "admin") {
-              setIsAdmin(true);
-              setUserRole("Administrador");
-            } else if (dbRole === "vendedor") {
-              setIsAdmin(true);
-              setUserRole("Vendedor");
-            } else {
-              setIsAdmin(false);
-              setUserRole("Cliente");
-            }
-          } else {
-            // Por si acaso el perfil aún no se crea en la base de datos
-            setProfileName(user.email || "Usuario");
-            setUserRole("Cliente");
-          }
-        } else {
-          setProfileName("Invitado");
-          setUserRole("Temporal");
-          setIsAdmin(false);
-        }
+      const profile = await fetchMyProfile();
+      if (profile) {
+        const displayName =
+          `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
+          profile.email ||
+          user.email ||
+          "Usuario";
+        setProfileName(displayName);
+        setUserRole(roleLabel(profile.role));
+        setIsAdmin(isStaffRole(profile.role));
+        console.log("[Perfil] rol cargado:", profile.role);
+      } else {
+        setProfileName(user.email || "Usuario");
+        setUserRole("Cliente");
+        setIsAdmin(false);
       }
     }
     loadUser();
-  }, []);
+    refreshUnread();
+    refreshClientUnread();
+  }, [refreshUnread, refreshClientUnread]);
 
   const handleAuthAction = async () => {
     await supabase.auth.signOut();
@@ -96,9 +89,46 @@ export default function ProfileScreen() {
 
   const isGuest = !user || user.is_anonymous;
 
-  const menuItems = isAdmin 
-    ? [{ icon: "shield", label: "Panel de Administración", sub: "Gestionar catálogo y ventas", route: "/admin/page" }, ...BASE_MENU_ITEMS]
-    : BASE_MENU_ITEMS;
+  const clientExtras = !isGuest
+    ? [
+        {
+          icon: "bell",
+          label: "Notificaciones",
+          sub: clientUnread > 0 ? `${clientUnread} sin leer` : "Promociones y mantenimiento",
+          route: "/notifications",
+          badge: clientUnread,
+        },
+        ...(!isAdmin
+          ? [
+              {
+                icon: "tool",
+                label: "Solicitar mantenimiento",
+                sub: "Reporta un problema con tu pasto",
+                route: "/maintenance-request",
+              },
+            ]
+          : []),
+        {
+          icon: "smartphone",
+          label: "Activar alertas push",
+          sub: "Permisos de notificación del sistema",
+          onPress: () => promptPushPermissionAgain(),
+        },
+      ]
+    : [];
+
+  const menuItems = isAdmin
+    ? [
+        {
+          icon: "shield",
+          label: "Panel de Administración",
+          sub: unreadCount > 0 ? `${unreadCount} cotización(es) nueva(s)` : "Catálogo, CRM y asignaciones",
+          route: "/admin/page",
+          badge: unreadCount,
+        },
+        ...BASE_MENU_ITEMS,
+      ]
+    : [...clientExtras, ...BASE_MENU_ITEMS];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -130,8 +160,13 @@ export default function ProfileScreen() {
             </View>
 
             <Text style={[styles.email, { color: colors.mutedForeground }]} numberOfLines={1}>
-              {isGuest ? "Iniciá sesión para cotizar" : user?.email}
+              {isGuest ? "Iniciá sesión para cotizar" : user?.email || "Sin correo en sesión"}
             </Text>
+            {!isGuest && user?.id ? (
+              <Text style={[styles.userId, { color: colors.mutedForeground }]} numberOfLines={1}>
+                ID: {user.id}
+              </Text>
+            ) : null}
           </View>
           <Pressable
             onPress={handleAuthAction}
@@ -149,7 +184,7 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           {[
             { icon: "shopping-bag", value: totalItems.toString(), label: "En carrito" },
-            { icon: "heart", value: favorites.length.toString(), label: "Favoritos" },
+            { icon: "heart", value: favoriteIds.length.toString(), label: "Favoritos" },
             { icon: "package", value: "0", label: "Pedidos" },
           ].map((s, i) => (
             <View key={i} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -181,7 +216,13 @@ export default function ProfileScreen() {
             {menuItems.map((item, i) => (
               <Pressable
                 key={i}
-                onPress={() => { if (item.route) router.push(item.route as any); }}
+                onPress={() => {
+                  if ("onPress" in item && typeof (item as { onPress?: () => void }).onPress === "function") {
+                    (item as { onPress: () => void }).onPress();
+                  } else if (item.route) {
+                    router.push(item.route as any);
+                  }
+                }}
                 style={[
                   styles.menuItem,
                   i < menuItems.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -194,6 +235,11 @@ export default function ProfileScreen() {
                   <Text style={[styles.menuLabel, { color: colors.foreground }]}>{item.label}</Text>
                   <Text style={[styles.menuSub, { color: colors.mutedForeground }]}>{item.sub}</Text>
                 </View>
+                {"badge" in item && (item as { badge?: number }).badge ? (
+                  <View style={[styles.notifBadge, { backgroundColor: "#EF4444" }]}>
+                    <Text style={styles.notifBadgeText}>{(item as { badge: number }).badge}</Text>
+                  </View>
+                ) : null}
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
               </Pressable>
             ))}
@@ -220,6 +266,7 @@ const styles = StyleSheet.create({
   roleBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
   roleText: { fontFamily: "Inter_700Bold", fontSize: 9, letterSpacing: 0.5, textTransform: "uppercase" },
   email: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
+  userId: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 4, opacity: 0.85 },
   loginBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 100 },
   loginBtnText: { fontFamily: "Inter_700Bold", fontSize: 13 },
   statsRow: { flexDirection: "row", gap: 10 },
@@ -237,6 +284,16 @@ const styles = StyleSheet.create({
   menuIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   menuLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
   menuSub: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 1 },
+  notifBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    marginRight: 4,
+  },
+  notifBadgeText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 11 },
   brandFooter: { alignItems: "center", gap: 4, paddingTop: 8 },
   brandText: { fontFamily: "Inter_700Bold", fontSize: 16, letterSpacing: 3 },
   brandSub: { fontFamily: "Inter_400Regular", fontSize: 12 },

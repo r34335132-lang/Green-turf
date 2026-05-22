@@ -44,7 +44,7 @@ export default function CategorySection() {
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 32 },
+  container: { marginTop: 24 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 16 },
   title: { fontFamily: "Inter_700Bold", fontSize: 20 },
   seeAll: { fontFamily: "Inter_600SemiBold", fontSize: 14 },

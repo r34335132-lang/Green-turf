@@ -35,7 +35,7 @@ export default function RegisterScreen() {
     }
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -49,6 +49,15 @@ export default function RegisterScreen() {
     if (error) {
       Alert.alert("Error de registro", error.message);
     } else {
+      if (data.user) {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: email.trim().toLowerCase(),
+          role: "cliente",
+        });
+      }
       Alert.alert("Cuenta creada", "¡Bienvenido a Green Turf!", [
         { text: "Entrar", onPress: () => router.replace("/(tabs)") }
       ]);

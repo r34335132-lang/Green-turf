@@ -8,6 +8,7 @@ import { Platform, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCart } from "@/context/CartContext";
+import { usePushOnLogin } from "@/hooks/usePushOnLogin";
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
@@ -179,6 +180,7 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
+  usePushOnLogin();
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }

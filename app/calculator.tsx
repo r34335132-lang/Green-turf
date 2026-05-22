@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -12,26 +14,38 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { APP_LIMITS, getProductPrice } from "@/constants/limits";
 import { useCart } from "@/context/CartContext";
-import { PRODUCTS } from "@/data/products";
+import { Product, getProducts } from "@/data/products";
 import { useColors } from "@/hooks/useColors";
 
 export default function CalculatorScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { addToCart } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
   const [waste, setWaste] = useState("10");
-  const [selectedId, setSelectedId] = useState(PRODUCTS[0].id);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    getProducts().then((list) => {
+      setProducts(list);
+      if (list[0]) setSelectedId(list[0].id);
+      setLoadingProducts(false);
+    });
+  }, []);
 
   const w = parseFloat(width) || 0;
   const h = parseFloat(height) || 0;
   const wasteP = parseFloat(waste) || 0;
   const baseArea = w * h;
   const totalArea = baseArea * (1 + wasteP / 100);
-  const product = PRODUCTS.find((p) => p.id === selectedId) ?? PRODUCTS[0];
-  const totalCost = totalArea * product.pricePerM2;
+  const product = products.find((p) => p.id === selectedId) ?? products[0];
+  const unitPrice = product ? getProductPrice(product) : 0;
+  const totalCost = totalArea * unitPrice;
 
   const hasResult = w > 0 && h > 0;
 
@@ -123,8 +137,15 @@ export default function CalculatorScreen() {
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 8 }]}>
           TIPO DE PASTO
         </Text>
+        {loadingProducts ? (
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
+        ) : products.length === 0 ? (
+          <Text style={[styles.emptyText, { color: colors.mutedForeground, textAlign: "center" }]}>
+            No hay productos en el catálogo todavía.
+          </Text>
+        ) : (
         <View style={styles.productList}>
-          {PRODUCTS.slice(0, 6).map((p) => (
+          {products.slice(0, 6).map((p) => (
             <Pressable
               key={p.id}
               onPress={() => setSelectedId(p.id)}
@@ -146,7 +167,7 @@ export default function CalculatorScreen() {
                 </Text>
               </View>
               <Text style={[styles.productPrice, { color: colors.primary }]}>
-                ${p.pricePerM2}/m²
+                ${getProductPrice(p)}/m²
               </Text>
               {selectedId === p.id && (
                 <View style={[styles.check, { backgroundColor: colors.primary }]}>
@@ -156,9 +177,10 @@ export default function CalculatorScreen() {
             </Pressable>
           ))}
         </View>
+        )}
 
         {/* Result */}
-        {hasResult && (
+        {hasResult && product && (
           <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
             <Text style={[styles.resultTitle, { color: colors.foreground }]}>
               Presupuesto estimado
@@ -186,7 +208,7 @@ export default function CalculatorScreen() {
                   Precio por m²
                 </Text>
                 <Text style={[styles.resultValue, { color: colors.foreground }]}>
-                  ${product.pricePerM2}
+                  ${unitPrice}
                 </Text>
               </View>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -202,7 +224,11 @@ export default function CalculatorScreen() {
 
             <Pressable
               onPress={() => {
-                addToCart(product, Math.ceil(totalArea));
+                const area = Math.min(
+                  APP_LIMITS.maxCartAreaPerItem,
+                  Math.ceil(totalArea)
+                );
+                addToCart(product, area);
                 router.push("/cart");
               }}
               style={[styles.addBtn, { backgroundColor: colors.primary }]}

@@ -55,7 +55,11 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       >
         <View style={{ height: imgHeight, borderRadius: 12, overflow: "hidden" }}>
           <Image
-            source={product.image}
+            source={
+              typeof product.image === "string" && product.image.startsWith("http")
+                ? { uri: product.image }
+                : product.image
+            }
             style={styles.image}
             resizeMode="cover"
           />
@@ -244,3 +248,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
+export default ProductCard;

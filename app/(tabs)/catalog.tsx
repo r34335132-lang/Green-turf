@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import ProductCard from "@/components/catalog/ProductCard";
+// <-- ARREGLADO: CON LLAVES -->
+import { ProductCard } from "@/components/catalog/ProductCard"; 
 import { Category, Product, getCategories, getProducts } from "@/data/products";
 import { useColors } from "@/hooks/useColors";
 
@@ -22,39 +23,42 @@ export default function CatalogScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
 
-  // Estados de interfaz
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     (params.category as string) || null
   );
   const [sortBy, setSortBy] = useState<"price" | "rating" | "name">("rating");
 
-  // Estados de datos (Supabase)
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos reales
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [fetchedProducts, fetchedCategories] = await Promise.all([
-          getProducts(),
-          getCategories(),
-        ]);
-        
-        setProducts(fetchedProducts || []);
-        setCategories(fetchedCategories || []);
-      } catch (error) {
-        console.error("Error cargando el catálogo:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        setLoading(true);
+        try {
+          const [fetchedProducts, fetchedCategories] = await Promise.all([
+            getProducts(),
+            getCategories(),
+          ]);
+          if (active) {
+            setProducts(fetchedProducts || []);
+            setCategories(fetchedCategories || []);
+          }
+        } catch (error) {
+          console.error("Error cargando el catálogo:", error);
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
 
-  // Filtrado y Ordenamiento Seguro
   const safeProducts = products || [];
   const filtered = safeProducts
     .filter((p) => {
@@ -83,7 +87,6 @@ export default function CatalogScreen() {
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header y Filtros de Orden */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.foreground }]}>Catálogo</Text>
         <View style={styles.sortRow}>
@@ -112,7 +115,6 @@ export default function CatalogScreen() {
         </View>
       </View>
 
-      {/* Buscador */}
       <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <Feather name="search" size={16} color={colors.mutedForeground} />
         <TextInput
@@ -129,7 +131,6 @@ export default function CatalogScreen() {
         )}
       </View>
 
-      {/* Categorías (Chips) */}
       <View>
         <FlatList
           data={[{ id: "all", name: "Todos", icon: "grid" }, ...categories]}
@@ -169,7 +170,6 @@ export default function CatalogScreen() {
         />
       </View>
 
-      {/* Lista de Productos Reales */}
       <FlatList
         data={filtered}
         keyExtractor={(p) => p.id}

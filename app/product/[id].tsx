@@ -64,7 +64,7 @@ export default function ProductScreen() {
             <Pressable onPress={() => router.back()} style={[styles.iconBtn, { backgroundColor: colors.background + "E6" }]}>
               <Feather name="arrow-left" size={24} color={colors.foreground} />
             </Pressable>
-            <Pressable onPress={() => toggleFavorite(product.id)} style={[styles.iconBtn, { backgroundColor: colors.background + "E6" }]}>
+            <Pressable onPress={() => toggleFavorite(product)} style={[styles.iconBtn, { backgroundColor: colors.background + "E6" }]}>
               <Feather name="heart" size={24} color={isFav ? "#EF4444" : colors.foreground} fill={isFav ? "#EF4444" : "transparent"} />
             </Pressable>
           </View>
@@ -111,6 +111,20 @@ export default function ProductScreen() {
             </View>
           </View>
 
+          <Pressable
+            style={[styles.visualizeBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary }]}
+            onPress={() => router.push({ pathname: "/(tabs)/visualizer", params: { productId: product.id } })}
+          >
+            <Feather name="image" size={22} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.visualizeTitle, { color: colors.foreground }]}>Visualizar en mi espacio</Text>
+              <Text style={[styles.visualizeSub, { color: colors.mutedForeground }]}>
+                IA proyecta este pasto en una foto tuya
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={22} color={colors.primary} />
+          </Pressable>
+
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Características Principales</Text>
           <View style={styles.featuresList}>
             {product.features?.map((feature, idx) => (
@@ -144,7 +158,7 @@ export default function ProductScreen() {
         <Pressable
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
           onPress={() => {
-            addToCart({ product, area: 10 });
+            addToCart(product, 10);
             router.push("/cart");
           }}
         >
@@ -170,7 +184,18 @@ const styles = StyleSheet.create({
   price: { fontFamily: "Inter_700Bold", fontSize: 28 },
   priceUnit: { fontFamily: "Inter_500Medium", fontSize: 14, textAlign: "right", marginTop: -4 },
   description: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 24, marginBottom: 24 },
-  specsCard: { flexDirection: "row", borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 32 },
+  specsCard: { flexDirection: "row", borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16 },
+  visualizeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  visualizeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  visualizeSub: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   spec: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
   specDivider: { width: 1, height: "100%", marginHorizontal: 16 },
   specLabel: { fontFamily: "Inter_500Medium", fontSize: 13, marginBottom: 2 },

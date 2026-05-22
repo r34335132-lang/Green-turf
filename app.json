@@ -17,7 +17,10 @@
       "supportsTablet": false
     },
     "android": {
-      "backgroundColor": "#0A0A0A"
+      "backgroundColor": "#0A0A0A",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -31,10 +34,23 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-image-picker"
+      "expo-image-picker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6DBE00"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a11b819e-d1d5-4223-9e95-d20e9e25b3c6"
+      }
+    },
+    "owner": "raulbri123"
   }
 }

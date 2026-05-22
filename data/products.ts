@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { APP_LIMITS } from '@/constants/limits';
 
 export interface Product {
   id: string;
@@ -38,37 +39,72 @@ export async function getCategories(): Promise<Category[]> {
   return data || [];
 }
 
-// 2. Obtener todos los productos desde Supabase
+export function mapProductRow(p: Record<string, unknown>): Product {
+  const categories = p.categories as { name?: string } | null | undefined;
+  return {
+    id: p.id as string,
+    name: p.name as string,
+    category_id: p.category_id as string | undefined,
+    category: categories?.name || 'General',
+    height: Number(p.height),
+    pricePerM2: Number(p.price_per_m2),
+    description: (p.description as string) || '',
+    features: (p.features as string[]) || [],
+    tags: (p.tags as string[]) || [],
+    image: (p.image_url as string) || '',
+    rating: Number(p.rating) || 0,
+    reviews: 0,
+    isNew: Boolean(p.is_new),
+    isBestSeller: Boolean(p.is_best_seller),
+    colors: [],
+  };
+}
+
+// 2. Obtener productos visibles en catálogo (excluye pausados)
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select(`
       *,
       categories ( name )
-    `);
+    `)
+    .or('is_paused.is.null,is_paused.eq.false')
+    .order('created_at', { ascending: false })
+    .limit(APP_LIMITS.maxProductsInCatalog);
 
   if (error) {
-    console.error("Error al cargar productos:", error.message);
+    console.error('[getProducts] Error:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
     return [];
   }
 
-  // Mapeamos los datos de SQL a la estructura que espera tu interfaz en React Native
-  return (data || []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    category: p.categories?.name || 'General',
-    height: p.height,
-    pricePerM2: p.price_per_m2,
-    description: p.description,
-    features: p.features || [],
-    tags: p.tags || [],
-    image: p.image_url, // Aquí inyectamos la URL del Bucket
-    rating: Number(p.rating),
-    reviews: 0, // Dato por defecto hasta que agregues sistema de reseñas
-    isNew: p.is_new,
-    isBestSeller: p.is_best_seller,
-    colors: p.colors || [],
-  }));
+  console.log('[getProducts] Productos cargados:', data?.length ?? 0);
+  return (data || []).map((p) => mapProductRow(p));
+}
+
+// Admin: incluye productos pausados
+export async function getAdminProducts(): Promise<Record<string, unknown>[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, categories(name)')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[getAdminProducts] Error:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw error;
+  }
+
+  console.log('[getAdminProducts] Productos cargados:', data?.length ?? 0);
+  return data || [];
 }
 
 // Mantenemos los slides del Home de forma estática y local
