@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -20,11 +21,30 @@ import { CartProvider } from "@/context/CartContext";
 import { ClientNotificationsProvider } from "@/context/ClientNotificationsContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { StaffNotificationsProvider } from "@/context/StaffNotificationsContext";
-import { supabase } from "@/lib/supabase"; // <-- Importamos Supabase
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseConfigError,
+} from "@/lib/supabase"; // <-- Importamos Supabase
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+function SupabaseConfigErrorScreen() {
+  return (
+    <SafeAreaProvider>
+      <View style={styles.configErrorContainer}>
+        <Text style={styles.configErrorTitle}>Configura Supabase</Text>
+        <Text style={styles.configErrorText}>{supabaseConfigError}</Text>
+        <Text style={styles.configErrorHint}>
+          Agrega estas variables al environment production de EAS y vuelve a
+          generar el build.
+        </Text>
+      </View>
+    </SafeAreaProvider>
+  );
+}
 
 function RootLayoutNav() {
   return (
@@ -77,6 +97,8 @@ export default function RootLayout() {
   // Lógica de Autenticación y Redirección
   useEffect(() => {
     // Verificar la sesión inicial al arrancar la app
+    if (!isSupabaseConfigured) return;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         // El setTimeout ayuda a que Expo Router termine de montarse antes de navegar
@@ -100,10 +122,12 @@ export default function RootLayout() {
 
   // Lógica de carga de fuentes
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if (!isSupabaseConfigured || fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  if (!isSupabaseConfigured) return <SupabaseConfigErrorScreen />;
 
   if (!fontsLoaded && !fontError) return null;
 
@@ -131,3 +155,29 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  configErrorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#0A0A0A",
+  },
+  configErrorTitle: {
+    marginBottom: 12,
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  configErrorText: {
+    marginBottom: 10,
+    color: "#FCA5A5",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  configErrorHint: {
+    color: "#D1D5DB",
+    fontSize: 14,
+    lineHeight: 21,
+  },
+});
