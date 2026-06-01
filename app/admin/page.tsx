@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -259,65 +260,90 @@ export default function AdminDashboardScreen() {
         </View>
       </LinearGradient>
 
-      <View style={[styles.tabBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Pressable
-          onPress={() => {
-            setActiveTab("tracking");
-            markAllRead();
-          }}
-          style={[styles.tab, activeTab === "tracking" && styles.tabActive]}
+      {/* Contenedor ScrollView para las pestañas, permite deslizar si la pantalla es estrecha */}
+      <View style={{ height: 60 }}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.tabBar, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={styles.tabScroll}
         >
-          <Feather
-            name="bell"
-            size={16}
-            color={activeTab === "tracking" ? colors.primary : colors.mutedForeground}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              { color: activeTab === "tracking" ? colors.foreground : colors.mutedForeground },
-            ]}
+          <Pressable
+            onPress={() => {
+              setActiveTab("tracking");
+              markAllRead();
+            }}
+            style={[styles.tab, activeTab === "tracking" && styles.tabActive]}
           >
-            Cotizaciones
-          </Text>
-          {(unreadCount > 0 || stats.pending > 0) && activeTab !== "tracking" ? (
-            <View style={[styles.badge, { backgroundColor: "#EF4444" }]}>
-              <Text style={styles.badgeText}>{unreadCount || stats.pending}</Text>
-            </View>
-          ) : null}
-        </Pressable>
+            <Feather
+              name="bell"
+              size={16}
+              color={activeTab === "tracking" ? colors.primary : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === "tracking" ? colors.foreground : colors.mutedForeground },
+              ]}
+            >
+              Cotiz.
+            </Text>
+            {(unreadCount > 0 || stats.pending > 0) && activeTab !== "tracking" ? (
+              <View style={[styles.badge, { backgroundColor: "#EF4444" }]}>
+                <Text style={styles.badgeText}>{unreadCount || stats.pending}</Text>
+              </View>
+            ) : null}
+          </Pressable>
 
-        <Pressable
-          onPress={() => setActiveTab("catalog")}
-          style={[styles.tab, activeTab === "catalog" && styles.tabActive]}
-        >
-          <Feather
-            name="package"
-            size={16}
-            color={activeTab === "catalog" ? colors.primary : colors.mutedForeground}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              { color: activeTab === "catalog" ? colors.foreground : colors.mutedForeground },
-            ]}
+          <Pressable
+            onPress={() => setActiveTab("catalog")}
+            style={[styles.tab, activeTab === "catalog" && styles.tabActive]}
           >
-            Inventario
-          </Text>
-        </Pressable>
+            <Feather
+              name="package"
+              size={16}
+              color={activeTab === "catalog" ? colors.primary : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                { color: activeTab === "catalog" ? colors.foreground : colors.mutedForeground },
+              ]}
+            >
+              Invent.
+            </Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => router.push("/admin/maintenance")}
-          style={styles.tab}
-        >
-          <Feather name="tool" size={16} color={colors.mutedForeground} />
-          <Text style={[styles.tabText, { color: colors.mutedForeground }]}>Mant.</Text>
-          {stats.maintPending > 0 ? (
-            <View style={[styles.badge, { backgroundColor: "#F59E0B" }]}>
-              <Text style={styles.badgeText}>{stats.maintPending}</Text>
-            </View>
-          ) : null}
-        </Pressable>
+          {/* Nuevas pestañas de acceso rápido a herramientas */}
+          <Pressable
+            onPress={() => router.push("/admin/agenda")}
+            style={styles.tab}
+          >
+            <Feather name="calendar" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.tabText, { color: colors.mutedForeground }]}>Agenda</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/admin/add-vendor")}
+            style={styles.tab}
+          >
+            <Feather name="users" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.tabText, { color: colors.mutedForeground }]}>Dist.</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/admin/maintenance")}
+            style={styles.tab}
+          >
+            <Feather name="tool" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.tabText, { color: colors.mutedForeground }]}>Mant.</Text>
+            {stats.maintPending > 0 ? (
+              <View style={[styles.badge, { backgroundColor: "#F59E0B" }]}>
+                <Text style={styles.badgeText}>{stats.maintPending}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </ScrollView>
       </View>
 
       {leadsError && activeTab === "tracking" ? (
@@ -353,6 +379,14 @@ export default function AdminDashboardScreen() {
                 item={item}
                 onTogglePause={() => togglePauseProduct(item.id, item.is_paused)}
                 onDelete={() => deleteProduct(item.id, item.name)}
+                onUpdateStock={async (id, newStock) => {
+                  const { error } = await supabase
+                    .from("products")
+                    .update({ stock: newStock })
+                    .eq("id", id);
+                  if (error) Alert.alert("Error", "No se pudo actualizar el stock");
+                  else loadDashboardData();
+                }}
               />
             ) : (
               <AdminLeadCard
@@ -415,15 +449,17 @@ const styles = StyleSheet.create({
   },
   statValue: { fontFamily: "Inter_700Bold", fontSize: 20 },
   statLabel: { fontFamily: "Inter_400Regular", fontSize: 10, marginTop: 2 },
-  tabBar: {
-    flexDirection: "row",
+  tabScroll: {
     marginHorizontal: 16,
     marginTop: -8,
-    marginBottom: 12,
+  },
+  tabBar: {
+    flexDirection: "row",
     padding: 4,
     borderRadius: 14,
     borderWidth: 1,
-    gap: 2,
+    gap: 6,
+    minWidth: '100%', 
   },
   tab: {
     flex: 1,
@@ -432,6 +468,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 10,
   },
   tabActive: { backgroundColor: "rgba(109,190,0,0.12)" },
@@ -443,6 +480,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
+    marginLeft: -2,
   },
   badgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
   errorBox: {

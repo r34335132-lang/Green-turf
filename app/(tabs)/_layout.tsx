@@ -22,10 +22,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
         <Label>Catálogo</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="visualizer">
-        <Icon sf={{ default: "camera.viewfinder", selected: "camera.viewfinder" }} />
-        <Label>IA</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="favorites">
         <Icon sf={{ default: "heart", selected: "heart.fill" }} />
         <Label>Favoritos</Label>

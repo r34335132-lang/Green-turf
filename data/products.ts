@@ -17,6 +17,7 @@ export interface Product {
   isNew?: boolean;
   isBestSeller?: boolean;
   colors: string[];
+  stock: number; // Agregado para el control de bodega
 }
 
 export interface Category {
@@ -57,6 +58,7 @@ export function mapProductRow(p: Record<string, unknown>): Product {
     isNew: Boolean(p.is_new),
     isBestSeller: Boolean(p.is_best_seller),
     colors: [],
+    stock: Number(p.stock) || 0, // Mapeo de la base de datos a la interfaz
   };
 }
 
