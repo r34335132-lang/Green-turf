@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -8,9 +8,10 @@ import {
   Pressable, 
   KeyboardAvoidingView, 
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  FlatList
 } from 'react-native';
-import { Agenda, DateData } from 'react-native-calendars';
+import { Calendar, DateData } from 'react-native-calendars';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,10 +22,11 @@ export default function AgendaScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   
-  const [items, setItems] = useState<{ [key: string]: any[] }>({});
+  // Guardamos TODAS las notas de la BD aquí
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   
-  // Por defecto, selecciona el día de hoy
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
   
@@ -32,51 +34,41 @@ export default function AgendaScreen() {
   const [noteDesc, setNoteDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Cargar notas al iniciar o al interactuar con el calendario
-  const loadItems = async (day?: DateData) => {
-    // Obtenemos las notas de la base de datos
-    const { data } = await supabase.from('agenda_notes').select('*');
-    
-    // Usamos setState con callback para NUNCA perder los datos anteriores
-    setItems((prevItems) => {
-      const newItems: { [key: string]: any[] } = { ...prevItems };
-      
-      // SOLUCIÓN AL BUCLE INFINITO: 
-      // Llenamos un rango de días alrededor del mes actual con arrays vacíos []. 
-      // Si la agenda ve "undefined", se cicla pidiendo datos para siempre.
-      if (day && day.timestamp) {
-        for (let i = -15; i < 50; i++) {
-          const time = day.timestamp + i * 24 * 60 * 60 * 1000;
-          const strTime = new Date(time).toISOString().split('T')[0];
-          if (!newItems[strTime]) {
-            newItems[strTime] = [];
-          }
-        }
-      }
-
-      // Limpiamos los arrays de las fechas que SI tienen notas en la BD
-      // para no duplicarlas visualmente al hacer re-render.
-      data?.forEach(note => {
-        newItems[note.date_string] = [];
-      });
-
-      // Llenamos con las notas reales de Supabase
-      data?.forEach(note => {
-        newItems[note.date_string].push({ 
-          id: note.id,
-          name: note.title, 
-          description: note.description,
-          day: note.date_string,
-        });
-      });
-
-      return newItems;
-    });
+  // 1. CARGAMOS LAS NOTAS UNA SOLA VEZ
+  const fetchNotes = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('agenda_notes').select('*').order('created_at', { ascending: false });
+    setNotes(data || []);
+    setLoading(false);
   };
 
   useEffect(() => {
-    loadItems();
+    fetchNotes();
   }, []);
+
+  // 2. CREAMOS LOS PUNTITOS PARA EL CALENDARIO
+  const markedDates = useMemo(() => {
+    const marks: any = {};
+    
+    // Ponemos un puntito en los días que tienen notas
+    notes.forEach(note => {
+      marks[note.date_string] = { marked: true, dotColor: colors.primary };
+    });
+    
+    // Resaltamos el día seleccionado
+    if (marks[selectedDate]) {
+      marks[selectedDate] = { ...marks[selectedDate], selected: true, selectedColor: colors.primary, selectedTextColor: '#000' };
+    } else {
+      marks[selectedDate] = { selected: true, selectedColor: colors.primary, selectedTextColor: '#000' };
+    }
+    
+    return marks;
+  }, [notes, selectedDate, colors]);
+
+  // 3. FILTRAMOS LAS NOTAS SOLO PARA EL DÍA SELECCIONADO
+  const selectedNotes = useMemo(() => {
+    return notes.filter(n => n.date_string === selectedDate);
+  }, [notes, selectedDate]);
 
   const saveNote = async () => {
     if (!noteTitle.trim()) return;
@@ -91,73 +83,76 @@ export default function AgendaScreen() {
     setModalVisible(false);
     setSaving(false);
     
-    // Al guardar, forzamos la recarga pasándole el día actual
-    const timestamp = new Date(selectedDate).getTime();
-    loadItems({ dateString: selectedDate, timestamp } as DateData); 
+    // Recargamos para ver la nueva nota
+    fetchNotes();
   };
 
-  // --- RENDERIZADO DE UI ---
+  // --- COMPONENTES DE UI ---
 
-  const renderItem = (item: any, isFirst: boolean) => {
-    return (
-      <Pressable style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.itemHeader}>
-          <Text style={[styles.itemTitle, { color: colors.foreground }]}>{item.name}</Text>
-          <View style={[styles.iconBadge, { backgroundColor: colors.primary + '20' }]}>
-             <Feather name="file-text" size={14} color={colors.primary} />
-          </View>
+  const renderItem = ({ item }: { item: any }) => (
+    <Pressable style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.itemHeader}>
+        <Text style={[styles.itemTitle, { color: colors.foreground }]}>{item.name}</Text>
+        <View style={[styles.iconBadge, { backgroundColor: colors.primary + '20' }]}>
+           <Feather name="file-text" size={14} color={colors.primary} />
         </View>
-        {item.description ? (
-          <Text style={[styles.itemDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
-            {item.description}
-          </Text>
-        ) : null}
-      </Pressable>
-    );
-  };
-
-  const renderEmptyDate = () => {
-    return (
-      <View style={[styles.emptyContainer]}>
-        <Feather name="calendar" size={40} color={colors.border} style={{ marginBottom: 12 }} />
-        <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Agenda libre para este día</Text>
-        <Pressable 
-          onPress={() => setModalVisible(true)}
-          style={[styles.emptyBtn, { borderColor: colors.primary }]}
-        >
-          <Text style={[styles.emptyBtnText, { color: colors.primary }]}>+ Agregar una nota</Text>
-        </Pressable>
       </View>
-    );
-  };
+      {item.description ? (
+        <Text style={[styles.itemDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
+          {item.description}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+
+  const renderEmptyDate = () => (
+    <View style={[styles.emptyContainer]}>
+      <Feather name="calendar" size={40} color={colors.border} style={{ marginBottom: 12 }} />
+      <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Agenda libre para este día</Text>
+      <Pressable 
+        onPress={() => setModalVisible(true)}
+        style={[styles.emptyBtn, { borderColor: colors.primary }]}
+      >
+        <Text style={[styles.emptyBtnText, { color: colors.primary }]}>+ Agregar una nota</Text>
+      </Pressable>
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Agenda
-        items={items}
-        loadItemsForMonth={loadItems}
-        selected={selectedDate}
+      {/* REEMPLAZO DE LA AGENDA:
+         Usamos un Calendar estático. Al no usar <Agenda>, el bug de React 19 / Fabric desaparece por completo.
+      */}
+      <Calendar
+        current={selectedDate}
         onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
-        renderItem={renderItem}
-        renderEmptyData={renderEmptyDate}
-        rowHasChanged={(r1, r2) => r1.id !== r2.id}
-        showClosingKnob={true}
+        markedDates={markedDates}
         theme={{
           calendarBackground: colors.card,
-          agendaKnobColor: colors.primary,
-          backgroundColor: colors.background,
-          agendaDayTextColor: colors.foreground,
-          agendaDayNumColor: colors.foreground,
-          agendaTodayColor: colors.primary,
           monthTextColor: colors.foreground,
-          textSectionTitleColor: colors.mutedForeground,
-          selectedDayBackgroundColor: colors.primary,
-          selectedDayTextColor: '#000',
+          dayTextColor: colors.foreground,
+          textDisabledColor: colors.mutedForeground + '50',
+          arrowColor: colors.primary,
           todayTextColor: colors.primary,
-          dotColor: colors.primary,
-          selectedDotColor: '#000',
         }}
       />
+
+      <Text style={[styles.listHeader, { color: colors.foreground }]}>
+        Notas del {selectedDate}
+      </Text>
+
+      {/* LISTA NATIVA DE REACT NATIVE PARA LAS NOTAS */}
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={selectedNotes}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={renderEmptyDate}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 80 }}
+        />
+      )}
 
       {/* Botón Flotante (FAB) */}
       <Pressable 
@@ -228,145 +223,45 @@ export default function AgendaScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Items de la agenda
+  listHeader: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
   itemCard: {
-    flex: 1,
     borderRadius: 12,
     padding: 16,
-    marginRight: 16,
-    marginTop: 17,
+    marginBottom: 12,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  itemTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    flex: 1,
-  },
-  iconBadge: {
-    padding: 6,
-    borderRadius: 8,
-  },
-  itemDesc: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-
-  // Estado vacío
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 15,
-    marginBottom: 16,
-  },
-  emptyBtn: {
-    borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  emptyBtnText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-  },
-
-  // Botón flotante
+  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  itemTitle: { fontFamily: 'Inter_700Bold', fontSize: 16, flex: 1 },
+  iconBadge: { padding: 6, borderRadius: 8 },
+  itemDesc: { fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 18 },
+  emptyContainer: { alignItems: 'center', paddingTop: 40 },
+  emptyText: { fontFamily: 'Inter_500Medium', fontSize: 15, marginBottom: 16 },
+  emptyBtn: { borderWidth: 1, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20 },
+  emptyBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
   fab: {
-    position: 'absolute',
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    position: 'absolute', right: 20, width: 56, height: 56, borderRadius: 28,
+    justifyContent: 'center', alignItems: 'center', shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 6,
   },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 20,
-  },
+  modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 20 },
   modalContent: {
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
+    borderRadius: 16, padding: 24, borderWidth: 1, shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 10,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  modalTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 20,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  dateSubtitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    marginBottom: 20,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 48,
-    fontFamily: 'Inter_400Regular',
-  },
-  textArea: {
-    height: 100,
-    paddingTop: 14,
-    textAlignVertical: 'top',
-  },
-  saveBtn: {
-    height: 50,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  saveBtnText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    color: '#000',
-  }
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  modalTitle: { fontFamily: 'Inter_700Bold', fontSize: 20 },
+  closeBtn: { padding: 4 },
+  dateSubtitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginBottom: 20 },
+  field: { marginBottom: 16 },
+  label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 },
+  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, height: 48, fontFamily: 'Inter_400Regular' },
+  textArea: { height: 100, paddingTop: 14, textAlignVertical: 'top' },
+  saveBtn: { height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  saveBtnText: { fontFamily: 'Inter_700Bold', fontSize: 16, color: '#000' }
 });
