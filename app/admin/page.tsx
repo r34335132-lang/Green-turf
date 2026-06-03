@@ -314,6 +314,15 @@ export default function AdminDashboardScreen() {
             </Text>
           </Pressable>
 
+          {/* NUEVO BOTÓN PARA LA BODEGA EXCLUSIVA */}
+          <Pressable
+            onPress={() => router.push("/admin/inventory")}
+            style={styles.tab}
+          >
+            <Feather name="clipboard" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.tabText, { color: colors.mutedForeground }]}>Bodega</Text>
+          </Pressable>
+
           {/* Nuevas pestañas de acceso rápido a herramientas */}
           <Pressable
             onPress={() => router.push("/admin/agenda")}
