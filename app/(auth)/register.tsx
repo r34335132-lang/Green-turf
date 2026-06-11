@@ -1,5 +1,6 @@
 // app/(auth)/register.tsx
 import { Feather } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,6 +19,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { supabase } from "@/lib/supabase";
+
+const PRIVACY_POLICY_URL =
+  "https://bronze-homegrown-706.notion.site/Aviso-de-Privacidad-Green-Turf-375621fdb4218049a58dea2240482e76?source=copy_link";
 
 export default function RegisterScreen() {
   const colors = useColors();
@@ -133,6 +137,17 @@ export default function RegisterScreen() {
             {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.btnText}>Registrarse</Text>}
           </Pressable>
 
+          <Text style={[styles.privacyText, { color: colors.mutedForeground }]}>
+            Al registrarte aceptas el{" "}
+            <Text
+              style={[styles.privacyLink, { color: colors.primary }]}
+              onPress={() => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL)}
+            >
+              Aviso de privacidad
+            </Text>
+            .
+          </Text>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -152,4 +167,12 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 15 },
   btn: { height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   btnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#000" },
+  privacyText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  privacyLink: { fontFamily: "Inter_700Bold" },
 });

@@ -29,7 +29,6 @@ const CARD_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2;
 
 const QUICK_ACTIONS = [
   { id: "catalog", label: "Catálogo", icon: "grid", route: "/(tabs)/catalog" as const },
-  { id: "visualizer", label: "Visualizador", icon: "camera", route: "/(tabs)/visualizer" as const },
   { id: "calculator", label: "Calculadora", icon: "maximize-2", route: "/calculator" as const },
 ];
 
@@ -232,28 +231,6 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
         )}
-
-        {/* Banner visualizador IA */}
-        <Pressable
-          style={[styles.aiBanner, { borderColor: colors.primary + "40" }]}
-          onPress={() => router.push("/(tabs)/visualizer")}
-        >
-          <View style={[styles.aiBannerGlow, { backgroundColor: colors.primary + "12" }]} />
-          <View style={styles.aiBannerContent}>
-            <View style={[styles.aiIcon, { backgroundColor: colors.primary }]}>
-              <Feather name="zap" size={22} color="#000" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.aiTitle, { color: colors.foreground }]}>
-                Visualizador con IA
-              </Text>
-              <Text style={[styles.aiSub, { color: colors.mutedForeground }]}>
-                Sube una foto y mira cómo queda el pasto en tu espacio
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={22} color={colors.primary} />
-          </View>
-        </Pressable>
 
         {homeGrid.length > 0 && (
           <View style={styles.section}>
@@ -475,29 +452,6 @@ const styles = StyleSheet.create({
   gridItem: { width: CARD_WIDTH },
   emptyBlock: { alignItems: "center", padding: 40, gap: 12 },
   emptyText: { fontFamily: "Inter_500Medium", fontSize: 14, textAlign: "center" },
-  aiBanner: {
-    marginHorizontal: GRID_PADDING,
-    marginTop: 28,
-    borderRadius: 18,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  aiBannerGlow: { ...StyleSheet.absoluteFillObject },
-  aiBannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 18,
-  },
-  aiIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  aiTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
-  aiSub: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 4, lineHeight: 18 },
   ctaBanner: {
     flexDirection: "row",
     alignItems: "center",

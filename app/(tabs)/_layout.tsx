@@ -118,39 +118,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="visualizer"
-        options={{
-          title: "IA",
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ position: "relative" }}>
-              <View
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  backgroundColor: focused ? colors.primary : colors.card,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 4,
-                  borderWidth: focused ? 0 : 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <Feather
-                  name="camera"
-                  size={22}
-                  color={focused ? "#000" : color}
-                />
-              </View>
-            </View>
-          ),
-          tabBarLabelStyle: {
-            fontFamily: "Inter_700Bold",
-            fontSize: 11,
-          },
-        }}
-      />
-      <Tabs.Screen
         name="favorites"
         options={{
           title: "Favoritos",

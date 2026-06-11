@@ -111,20 +111,6 @@ export default function ProductScreen() {
             </View>
           </View>
 
-          <Pressable
-            style={[styles.visualizeBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary }]}
-            onPress={() => router.push({ pathname: "/(tabs)/visualizer", params: { productId: product.id } })}
-          >
-            <Feather name="image" size={22} color={colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.visualizeTitle, { color: colors.foreground }]}>Visualizar en mi espacio</Text>
-              <Text style={[styles.visualizeSub, { color: colors.mutedForeground }]}>
-                IA proyecta este pasto en una foto tuya
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={22} color={colors.primary} />
-          </Pressable>
-
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Características Principales</Text>
           <View style={styles.featuresList}>
             {product.features?.map((feature, idx) => (
@@ -185,17 +171,6 @@ const styles = StyleSheet.create({
   priceUnit: { fontFamily: "Inter_500Medium", fontSize: 14, textAlign: "right", marginTop: -4 },
   description: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 24, marginBottom: 24 },
   specsCard: { flexDirection: "row", borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16 },
-  visualizeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 24,
-  },
-  visualizeTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
-  visualizeSub: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   spec: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
   specDivider: { width: 1, height: "100%", marginHorizontal: 16 },
   specLabel: { fontFamily: "Inter_500Medium", fontSize: 13, marginBottom: 2 },

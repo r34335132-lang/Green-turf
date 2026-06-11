@@ -4,7 +4,7 @@
     "slug": "green-turf",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "green-turf",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -21,10 +21,7 @@
       }
     },
     "android": {
-      "backgroundColor": "#0A0A0A",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "backgroundColor": "#0A0A0A"
     },
     "web": {
       "favicon": "./assets/images/logo.png"

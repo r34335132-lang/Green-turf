@@ -34,6 +34,8 @@ LocaleConfig.defaultLocale = 'es';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -100,13 +102,16 @@ export default function AgendaScreen() {
 
     if (triggerDate.getTime() < Date.now()) return;
 
-    await Notifications.scheduleLocalNotificationAsync({
+    await Notifications.scheduleNotificationAsync({
       content: {
         title: `📌 Pendiente hoy: ${title}`,
         body: desc || 'Revisa tu agenda para más detalles.',
         sound: true,
       },
-      trigger: triggerDate,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
     });
   };
 

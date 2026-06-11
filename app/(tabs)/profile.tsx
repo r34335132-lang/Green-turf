@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StatusBar,
@@ -19,6 +21,12 @@ import { promptPushPermissionAgain } from "@/hooks/usePushOnLogin";
 import { useColors } from "@/hooks/useColors";
 import { fetchMyProfile, isStaffRole, roleLabel } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
+
+const PRIVACY_POLICY_URL =
+  "https://bronze-homegrown-706.notion.site/Aviso-de-Privacidad-Green-Turf-375621fdb4218049a58dea2240482e76?source=copy_link";
+
+const DELETE_ACCOUNT_URL =
+  "https://bronze-homegrown-706.notion.site/Eliminaci-n-de-cuenta-Green-Turf-375621fdb42180a8b191fc37cb417c21?source=copy_link";
 
 const BASE_MENU_ITEMS = [
   { icon: "shopping-bag", label: "Mis pedidos", sub: "Ver historial" },
@@ -89,6 +97,21 @@ export default function ProfileScreen() {
 
   const isGuest = !user || user.is_anonymous;
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Eliminar cuenta",
+      "Esta acciÃ³n eliminarÃ¡ tu cuenta y tus datos asociados. Â¿Deseas continuar?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => WebBrowser.openBrowserAsync(DELETE_ACCOUNT_URL),
+        },
+      ]
+    );
+  };
+
   const clientExtras = !isGuest
     ? [
         {
@@ -117,6 +140,25 @@ export default function ProfileScreen() {
       ]
     : [];
 
+  const privacyItems = [
+    {
+      icon: "file-text",
+      label: "Aviso de privacidad",
+      sub: "Consulta cÃ³mo usamos tus datos",
+      onPress: () => WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL),
+    },
+    ...(!isGuest
+      ? [
+          {
+            icon: "trash-2",
+            label: "Eliminar mi cuenta",
+            sub: "Solicita la eliminaciÃ³n de tus datos",
+            onPress: handleDeleteAccount,
+          },
+        ]
+      : []),
+  ];
+
   const menuItems = isAdmin
     ? [
         {
@@ -127,8 +169,9 @@ export default function ProfileScreen() {
           badge: unreadCount,
         },
         ...BASE_MENU_ITEMS,
+        ...privacyItems,
       ]
-    : [...clientExtras, ...BASE_MENU_ITEMS];
+    : [...clientExtras, ...BASE_MENU_ITEMS, ...privacyItems];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -219,7 +262,7 @@ export default function ProfileScreen() {
                 onPress={() => {
                   if ("onPress" in item && typeof (item as { onPress?: () => void }).onPress === "function") {
                     (item as { onPress: () => void }).onPress();
-                  } else if (item.route) {
+                  } else if ("route" in item && item.route) {
                     router.push(item.route as any);
                   }
                 }}

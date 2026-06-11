@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ImageSourcePropType,
 } from "react-native";
 
 import { useFavorites } from "@/context/FavoritesContext";
@@ -37,6 +38,9 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
 
   const cardWidth = compact ? (width - 52) / 2 : width - 40;
   const imgHeight = compact ? 160 : 260;
+  const imageSource: ImageSourcePropType = product.image
+    ? { uri: product.image }
+    : require("../../assets/images/grass_texture.png");
 
   return (
     <Animated.View style={[{ transform: [{ scale }] }]}>
@@ -55,11 +59,7 @@ export function ProductCard({ product, compact = false }: ProductCardProps) {
       >
         <View style={{ height: imgHeight, borderRadius: 12, overflow: "hidden" }}>
           <Image
-            source={
-              typeof product.image === "string" && product.image.startsWith("http")
-                ? { uri: product.image }
-                : product.image
-            }
+            source={imageSource}
             style={styles.image}
             resizeMode="cover"
           />

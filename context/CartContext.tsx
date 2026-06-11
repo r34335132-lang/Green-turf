@@ -51,6 +51,7 @@ function normalizeStoredProduct(raw: unknown): Product | null {
     colors: [],
     isNew: Boolean(src.isNew ?? src.is_new),
     isBestSeller: Boolean(src.isBestSeller ?? src.is_best_seller),
+    stock: Number(src.stock) || 0,
   };
 }
 

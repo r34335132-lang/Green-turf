@@ -203,15 +203,27 @@ export default function AdminMaintenanceScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
-      ) : (
+      ) : subTab === "requests" ? (
         <FlatList
-          data={subTab === "requests" ? requests : logs}
+          data={requests}
           keyExtractor={(i) => i.id}
-          renderItem={subTab === "requests" ? renderRequest : renderLog}
+          renderItem={renderRequest}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <Text style={[styles.empty, { color: colors.mutedForeground }]}>
               {subTab === "requests" ? "Sin solicitudes aún" : "Sin registros aún"}
+            </Text>
+          }
+        />
+      ) : (
+        <FlatList
+          data={logs}
+          keyExtractor={(i) => i.id}
+          renderItem={renderLog}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <Text style={[styles.empty, { color: colors.mutedForeground }]}>
+              Sin registros aún
             </Text>
           }
         />
