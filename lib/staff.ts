@@ -9,7 +9,7 @@ export type StaffMember = {
   label: string;
 };
 
-export type StaffRole = "admin" | "vendedor" | "cliente" | string;
+export type StaffRole = "admin" | "staff" | "vendedor" | "instalador" | "cliente" | string;
 
 export async function getCurrentStaffProfile(): Promise<{
   id: string;
@@ -77,7 +77,7 @@ export async function getStaffMembers(): Promise<StaffMember[]> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, first_name, last_name, role")
-    .in("role", ["admin", "vendedor"])
+    .in("role", ["admin", "staff", "vendedor", "instalador"])
     .order("first_name");
 
   if (error) throw error;

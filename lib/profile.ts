@@ -2,7 +2,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase";
 
-export type AppRole = "admin" | "vendedor" | "cliente";
+export type AppRole = "admin" | "staff" | "vendedor" | "instalador" | "cliente";
 
 export type UserProfile = {
   id: string;
@@ -16,19 +16,21 @@ export type UserProfile = {
 
 export function normalizeRole(role: string | null | undefined): AppRole {
   const r = (role || "cliente").trim().toLowerCase();
-  if (r === "admin" || r === "vendedor") return r;
+  if (r === "admin" || r === "staff" || r === "vendedor" || r === "instalador") return r;
   return "cliente";
 }
 
 export function roleLabel(role: AppRole): string {
   if (role === "admin") return "Administrador";
+  if (role === "staff") return "Staff";
   if (role === "vendedor") return "Vendedor";
+  if (role === "instalador") return "Instalador";
   return "Cliente";
 }
 
 export function isStaffRole(role: AppRole | string): boolean {
   const r = normalizeRole(typeof role === "string" ? role : role);
-  return r === "admin" || r === "vendedor";
+  return r === "admin" || r === "staff" || r === "vendedor" || r === "instalador";
 }
 
 const UUID_RE =

@@ -7,9 +7,12 @@ import { StaffMember } from "@/lib/staff";
 import { useColors } from "@/hooks/useColors";
 
 const STATUS: Record<string, { label: string; color: string }> = {
+  nuevo: { label: "Nuevo", color: "#A855F7" },
   pendiente: { label: "Pendiente", color: "#EF4444" },
   contactado: { label: "Contactado", color: "#3B82F6" },
   cotizado: { label: "Cotizado", color: "#F59E0B" },
+  ganado: { label: "Ganado", color: "#22C55E" },
+  perdido: { label: "Perdido", color: "#6B7280" },
   cerrado: { label: "Cerrado", color: "#22C55E" },
   descartado: { label: "Descartado", color: "#6B7280" },
 };

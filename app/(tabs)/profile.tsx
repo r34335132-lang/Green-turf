@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           icon: "shield",
           label: "Panel de Administración",
           sub: unreadCount > 0 ? `${unreadCount} cotización(es) nueva(s)` : "Catálogo, CRM y asignaciones",
-          route: "/admin/page",
+          route: "/admin",
           badge: unreadCount,
         },
         ...BASE_MENU_ITEMS,
