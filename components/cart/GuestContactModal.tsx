@@ -12,7 +12,9 @@ import {
   View,
 } from "react-native";
 
+import { PhoneInput } from "@/components/PhoneInput";
 import { useColors } from "@/hooks/useColors";
+import { normalizeMexicanPhone, phoneDigits } from "@/lib/phone";
 
 export type GuestContact = {
   name: string;
@@ -53,19 +55,23 @@ export function GuestContactModal({
     const trimmedPhone = phone.trim();
     const trimmedEmail = email.trim().toLowerCase();
     if (trimmedName.length < 2) return;
-    if (trimmedPhone.replace(/\D/g, "").length < 8) return;
+    if (phoneDigits(trimmedPhone).length !== 10) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) return;
-    onSubmit({ name: trimmedName, phone: trimmedPhone, email: trimmedEmail });
+    onSubmit({
+      name: trimmedName,
+      phone: normalizeMexicanPhone(trimmedPhone),
+      email: trimmedEmail,
+    });
   };
 
   const nameOk = name.trim().length >= 2;
-  const phoneOk = phone.replace(/\D/g, "").length >= 8;
+  const phoneOk = phoneDigits(phone).length === 10;
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.overlay}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
@@ -91,15 +97,10 @@ export function GuestContactModal({
             style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           />
 
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>Teléfono *</Text>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Ej. 55 1234 5678"
-            placeholderTextColor={colors.mutedForeground}
-            keyboardType="phone-pad"
-            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-          />
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>
+            Clave lada y número *
+          </Text>
+          <PhoneInput value={phone} onChangeText={setPhone} />
 
           <Text style={[styles.label, { color: colors.mutedForeground }]}>Correo *</Text>
           <TextInput

@@ -203,8 +203,8 @@ export default function AddVendorScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 80 }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </Pressable>

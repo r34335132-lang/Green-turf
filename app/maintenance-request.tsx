@@ -15,8 +15,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PhoneInput } from "@/components/PhoneInput";
 import { useColors } from "@/hooks/useColors";
 import { createMaintenanceRequest, getMyMaintenanceRequests } from "@/lib/maintenance";
+import { normalizeMexicanPhone, phoneDigits } from "@/lib/phone";
 import { supabase } from "@/lib/supabase";
 
 export default function MaintenanceRequestScreen() {
@@ -48,7 +50,7 @@ export default function MaintenanceRequestScreen() {
   }, []);
 
   const submit = async () => {
-    if (!name.trim() || !phone.trim() || !description.trim()) {
+    if (!name.trim() || phoneDigits(phone).length !== 10 || !description.trim()) {
       Alert.alert("Completa nombre, teléfono y descripción del problema.");
       return;
     }
@@ -56,7 +58,7 @@ export default function MaintenanceRequestScreen() {
     try {
       await createMaintenanceRequest({
         client_name: name.trim(),
-        phone: phone.trim(),
+        phone: normalizeMexicanPhone(phone),
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         description: description.trim(),
@@ -76,9 +78,9 @@ export default function MaintenanceRequestScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 80 }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
         <Pressable onPress={() => router.back()}>
           <Feather name="x" size={24} color={colors.foreground} />
         </Pressable>
@@ -90,20 +92,26 @@ export default function MaintenanceRequestScreen() {
           Describe el problema con tu pasto. El equipo te contactará.
         </Text>
 
-        {["Nombre *", "Teléfono *", "Correo", "Dirección / ubicación"].map((lbl, i) => {
+        {["Nombre *", "Clave lada y número *", "Correo", "Dirección / ubicación"].map((lbl, i) => {
           const fields = [name, phone, email, address];
           const setters = [setName, setPhone, setEmail, setAddress];
           const keys = ["name", "phone", "email", "address"] as const;
           return (
             <View key={keys[i]}>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>{lbl}</Text>
-              <TextInput
-                value={fields[i]}
-                onChangeText={setters[i]}
-                keyboardType={i === 1 ? "phone-pad" : i === 2 ? "email-address" : "default"}
-                placeholderTextColor={colors.mutedForeground}
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
-              />
+              {i === 1 ? (
+                <View style={styles.phoneField}>
+                  <PhoneInput value={phone} onChangeText={setPhone} />
+                </View>
+              ) : (
+                <TextInput
+                  value={fields[i]}
+                  onChangeText={setters[i]}
+                  keyboardType={i === 2 ? "email-address" : "default"}
+                  placeholderTextColor={colors.mutedForeground}
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]}
+                />
+              )}
             </View>
           );
         })}
@@ -150,6 +158,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: "Inter_700Bold", fontSize: 24 },
   sub: { fontFamily: "Inter_400Regular", fontSize: 14, marginTop: 6, marginBottom: 20, lineHeight: 20 },
   label: { fontFamily: "Inter_600SemiBold", fontSize: 12, marginBottom: 6 },
+  phoneField: { marginBottom: 12 },
   input: { height: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontFamily: "Inter_500Medium", marginBottom: 12 },
   area: { minHeight: 100, paddingVertical: 12, textAlignVertical: "top" },
   btn: { height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },

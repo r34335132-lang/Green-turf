@@ -15,7 +15,7 @@ DECLARE
   meta_role text;
 BEGIN
   meta_role := COALESCE(NULLIF(trim(NEW.raw_user_meta_data->>'role'), ''), 'cliente');
-  IF meta_role NOT IN ('admin', 'vendedor', 'cliente') THEN
+  IF meta_role NOT IN ('admin', 'vendedor', 'staff', 'instalador', 'cliente') THEN
     meta_role := 'cliente';
   END IF;
 
@@ -32,8 +32,8 @@ BEGIN
     last_name = COALESCE(EXCLUDED.last_name, profiles.last_name),
     email = COALESCE(EXCLUDED.email, profiles.email),
     role = CASE
-      WHEN EXCLUDED.role IN ('admin', 'vendedor') THEN EXCLUDED.role
-      WHEN profiles.role IN ('admin', 'vendedor') THEN profiles.role
+      WHEN EXCLUDED.role IN ('admin', 'vendedor', 'staff', 'instalador') THEN EXCLUDED.role
+      WHEN profiles.role IN ('admin', 'vendedor', 'staff', 'instalador') THEN profiles.role
       ELSE EXCLUDED.role
     END;
 
@@ -60,7 +60,7 @@ BEGIN
     RAISE EXCEPTION 'Solo administradores pueden cambiar roles';
   END IF;
 
-  IF new_role NOT IN ('admin', 'vendedor', 'cliente') THEN
+  IF new_role NOT IN ('admin', 'vendedor', 'staff', 'instalador', 'cliente') THEN
     RAISE EXCEPTION 'Rol inválido';
   END IF;
 

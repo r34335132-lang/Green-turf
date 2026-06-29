@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LeadRow } from "@/lib/leads";
 import { StaffMember } from "@/lib/staff";
 import { useColors } from "@/hooks/useColors";
+import { displayMexicanPhone } from "@/lib/phone";
 
 const STATUS: Record<string, { label: string; color: string }> = {
   nuevo: { label: "Nuevo", color: "#A855F7" },
@@ -87,7 +88,7 @@ export function AdminLeadCard({
       </View>
 
       <View style={[styles.infoGrid, { backgroundColor: colors.background }]}>
-        <InfoRow icon="phone" text={item.phone || "—"} colors={colors} />
+        <InfoRow icon="phone" text={displayMexicanPhone(item.phone) || "—"} colors={colors} />
         <InfoRow icon="mail" text={item.email || "—"} colors={colors} />
         <InfoRow icon="layers" text={item.products?.name || "Pasto"} colors={colors} />
         {(item.m2_requested ?? 0) > 0 ? (

@@ -1,5 +1,6 @@
 import { fetchMyProfile, isStaffRole as checkStaff, normalizeRole } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
+import { normalizeMexicanPhone } from "@/lib/phone";
 
 export type StaffMember = {
   id: string;
@@ -56,21 +57,45 @@ export async function getPromotableClients(): Promise<PromotableClient[]> {
 
 export async function promoteUserToVendor(
   userId: string,
-  extras?: { firstName?: string; lastName?: string; phone?: string }
+  extras?: { firstName?: string; lastName?: string; phone?: string; role?: "vendedor" | "staff" | "instalador" }
 ) {
+  const role = extras?.role || "vendedor";
   const { error: rpcErr } = await supabase.rpc("admin_set_profile_role", {
     target_id: userId,
-    new_role: "vendedor",
+    new_role: role,
   });
   if (rpcErr) throw rpcErr;
 
-  const patch: Record<string, string | null> = { role: "vendedor" };
+  const patch: Record<string, string | null> = { role };
   if (extras?.firstName?.trim()) patch.first_name = extras.firstName.trim();
   if (extras?.lastName?.trim()) patch.last_name = extras.lastName.trim();
-  if (extras?.phone?.trim()) patch.phone = extras.phone.trim();
+  if (extras?.phone?.trim()) patch.phone = normalizeMexicanPhone(extras.phone);
 
   const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
   if (error) throw error;
+}
+
+export async function createStaffAccount(input: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  role: "vendedor" | "staff" | "instalador";
+}) {
+  const { data, error } = await supabase.functions.invoke("create-staff", {
+    body: {
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+      phone: normalizeMexicanPhone(input.phone),
+      role: input.role,
+    },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export async function getStaffMembers(): Promise<StaffMember[]> {

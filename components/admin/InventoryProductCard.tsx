@@ -15,7 +15,7 @@ export type InventoryProduct = {
   categories?: { name?: string } | null;
 };
 
-export function InventoryProductCard({ product, saving, onAdjust }: { product: InventoryProduct; saving?: boolean; onAdjust: (delta: number) => void }) {
+export function InventoryProductCard({ product, saving, onAdjust, showPrice = true }: { product: InventoryProduct; saving?: boolean; onAdjust: (delta: number) => void; showPrice?: boolean }) {
   const colors = useColors();
   const min = product.min_stock ?? 5;
   const state = product.stock <= 0 ? { label: "Agotado", color: "#EF4444" } : product.stock <= min ? { label: "Bajo stock", color: "#F59E0B" } : { label: "Disponible", color: "#22C55E" };
@@ -24,7 +24,7 @@ export function InventoryProductCard({ product, saving, onAdjust }: { product: I
       {product.image_url ? <Image source={product.image_url} style={styles.image} contentFit="cover" /> : <View style={[styles.image, styles.placeholder, { backgroundColor: colors.primary + "18" }]}><Feather name="layers" size={22} color={colors.primary} /></View>}
       <View style={styles.copy}>
         <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>{product.name}</Text>
-        <Text style={[styles.meta, { color: colors.mutedForeground }]}>{product.categories?.name || "General"} · ${product.price_per_m2}/m²</Text>
+        <Text style={[styles.meta, { color: colors.mutedForeground }]}>{product.categories?.name || "General"}{showPrice ? ` · $${product.price_per_m2}/m²` : ""}</Text>
         <Text style={[styles.state, { color: state.color }]}>{state.label} · mínimo {min}</Text>
       </View>
       <View style={styles.control}>

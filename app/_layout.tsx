@@ -26,6 +26,7 @@ import {
   supabase,
   supabaseConfigError,
 } from "@/lib/supabase"; // <-- Importamos Supabase
+import { fetchMyProfile, isStaffRole } from "@/lib/profile";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -86,6 +87,11 @@ function RootLayoutNav() {
   );
 }
 
+async function routeForSession() {
+  const profile = await fetchMyProfile();
+  router.replace(profile && isStaffRole(profile.role) ? "/(tabs)/operations" : "/(tabs)");
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -103,6 +109,8 @@ export default function RootLayout() {
       if (!session) {
         // El setTimeout ayuda a que Expo Router termine de montarse antes de navegar
         setTimeout(() => router.replace("/(auth)/login"), 0);
+      } else {
+        setTimeout(() => { routeForSession(); }, 0);
       }
     });
 
@@ -111,7 +119,7 @@ export default function RootLayout() {
       if (event === "SIGNED_OUT" || !session) {
         setTimeout(() => router.replace("/(auth)/login"), 0);
       } else if (event === "SIGNED_IN") {
-        setTimeout(() => router.replace("/(tabs)"), 0);
+        setTimeout(() => { routeForSession(); }, 0);
       }
     });
 

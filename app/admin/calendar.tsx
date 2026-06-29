@@ -4,9 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AdminShell } from "@/components/admin/AdminShell";
+import { PhoneInput } from "@/components/PhoneInput";
 import { EventCard } from "@/components/admin/EventCard";
 import { AdminEvent, useAdminEvents } from "@/hooks/useAdminEvents";
 import { useColors } from "@/hooks/useColors";
+import { normalizeMexicanPhone } from "@/lib/phone";
 import { AddButton, EditorModal, EmptyState, ErrorState, Input, Label, SaveButton } from "@/app/admin/notes";
 
 LocaleConfig.locales.es = {
@@ -77,7 +79,7 @@ export default function AdminCalendarScreen() {
         event_type: eventType,
         status,
         client_name: clientName.trim() || null,
-        client_phone: clientPhone.trim() || null,
+        client_phone: normalizeMexicanPhone(clientPhone) || null,
       }, editing?.id);
       setModal(false);
     } catch (e: any) {
@@ -126,7 +128,7 @@ export default function AdminCalendarScreen() {
         <Choice label="Tipo" values={TYPES} selected={eventType} onSelect={setEventType} />
         <Choice label="Estado" values={STATUSES} selected={status} onSelect={setStatus} />
         <Label text="Cliente relacionado" /><Input value={clientName} onChangeText={setClientName} placeholder="Nombre (opcional)" />
-        <Label text="Teléfono" /><Input value={clientPhone} onChangeText={setClientPhone} placeholder="Teléfono (opcional)" />
+        <Label text="Clave lada y número" /><PhoneInput value={clientPhone} onChangeText={setClientPhone} />
         <SaveButton label="Guardar evento" saving={saving} disabled={!title.trim() || !selectedDate} onPress={submit} />
       </EditorModal>
     </AdminShell>
@@ -150,4 +152,3 @@ const styles = StyleSheet.create({
   choice: { borderWidth: 1, borderRadius: 100, paddingHorizontal: 10, paddingVertical: 7 },
   choiceText: { fontFamily: "Inter_600SemiBold", fontSize: 10, textTransform: "capitalize" },
 });
-

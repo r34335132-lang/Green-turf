@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { NoteCard } from "@/components/admin/NoteCard";
@@ -93,7 +93,42 @@ export function AddButton({ onPress }: { onPress: () => void }) {
 
 export function EditorModal({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
   const colors = useColors();
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.overlay}><ScrollView contentContainerStyle={styles.modalScroll} keyboardShouldPersistTaps="handled"><View style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={styles.modalHeader}><Text style={[styles.modalTitle, { color: colors.foreground }]}>{title}</Text><Pressable onPress={onClose}><Feather name="x" size={21} color={colors.mutedForeground} /></Pressable></View>{children}</View></ScrollView></View></Modal>;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+      >
+        <View style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text numberOfLines={1} style={[styles.modalTitle, { color: colors.foreground }]}>
+              {title}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
+              hitSlop={12}
+              onPress={onClose}
+              style={[styles.closeButton, { backgroundColor: colors.background }]}
+            >
+              <Feather name="x" size={20} color={colors.foreground} />
+            </Pressable>
+          </View>
+          <ScrollView
+            style={styles.modalBody}
+            contentContainerStyle={styles.modalBodyContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
 }
 
 export function Label({ text }: { text: string }) {
@@ -131,11 +166,13 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   add: { height: 42, paddingHorizontal: 15, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 7 },
   addText: { color: "#071000", fontFamily: "Inter_700Bold", fontSize: 12 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)" },
-  modalScroll: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 18 },
-  modal: { width: "100%", maxWidth: 540, borderRadius: 20, borderWidth: 1, padding: 20 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  modalTitle: { fontFamily: "Inter_700Bold", fontSize: 20 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 16 },
+  modal: { width: "100%", maxWidth: 540, height: "90%", maxHeight: 760, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
+  modalHeader: { minHeight: 58, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1 },
+  modalTitle: { flex: 1, fontFamily: "Inter_700Bold", fontSize: 18, marginRight: 12 },
+  closeButton: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  modalBody: { flex: 1, minHeight: 0 },
+  modalBodyContent: { padding: 18, paddingBottom: 140 },
   label: { fontFamily: "Inter_600SemiBold", fontSize: 11, marginBottom: 7 },
   input: { minHeight: 46, borderRadius: 11, borderWidth: 1, paddingHorizontal: 13, marginBottom: 14, fontFamily: "Inter_500Medium", fontSize: 13 },
   area: { minHeight: 110, paddingTop: 12, textAlignVertical: "top" },

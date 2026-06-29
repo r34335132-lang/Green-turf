@@ -1,4 +1,4 @@
-import { Stack, router } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
@@ -7,6 +7,7 @@ import { fetchMyProfile, isStaffRole } from "@/lib/profile";
 
 export default function AdminLayout() {
   const colors = useColors();
+  const pathname = usePathname();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -16,10 +17,15 @@ export default function AdminLayout() {
           router.replace("/(tabs)" as never);
           return;
         }
+        const adminOnly = ["/admin/sales", "/admin/reports", "/admin/team", "/admin/add-product", "/admin/add-vendor", "/admin/send-promo"];
+        if (profile.role !== "admin" && adminOnly.some((route) => pathname.startsWith(route))) {
+          router.replace("/operations" as never);
+          return;
+        }
         setChecking(false);
       })
       .catch(() => router.replace("/(tabs)" as never));
-  }, []);
+  }, [pathname]);
 
   if (checking) {
     return (

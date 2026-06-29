@@ -48,7 +48,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }} bounces={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
         <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: insets.bottom }]}>
           
           {/* Header Visual */}

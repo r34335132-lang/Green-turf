@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -13,15 +13,18 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { AppRole, fetchMyProfile } from "@/lib/profile";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: "grid" as const, route: "/admin" },
-  { label: "Notas", icon: "file-text" as const, route: "/admin/notes" },
-  { label: "Calendario", icon: "calendar" as const, route: "/admin/calendar" },
-  { label: "Tareas", icon: "check-square" as const, route: "/admin/tasks" },
-  { label: "Inventario", icon: "package" as const, route: "/admin/inventory" },
+  { label: "Ventas / Pedidos", icon: "shopping-cart" as const, route: "/admin/sales", adminOnly: true },
   { label: "Clientes", icon: "users" as const, route: "/admin/clients" },
-  { label: "Equipo", icon: "briefcase" as const, route: "/admin/team" },
+  { label: "Calendario", icon: "calendar" as const, route: "/admin/calendar" },
+  { label: "Inventario", icon: "package" as const, route: "/admin/inventory" },
+  { label: "Reportes", icon: "bar-chart-2" as const, route: "/admin/reports", adminOnly: true },
+  { label: "Tareas", icon: "check-square" as const, route: "/admin/tasks" },
+  { label: "Notas", icon: "file-text" as const, route: "/admin/notes" },
+  { label: "Equipo", icon: "briefcase" as const, route: "/admin/team", adminOnly: true },
 ];
 
 type Props = {
@@ -37,6 +40,10 @@ export function AdminShell({ title, subtitle, children, action }: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const desktop = width >= 900;
+  const insideMainTabs = !pathname.startsWith("/admin");
+  const [role, setRole] = useState<AppRole>("cliente");
+  useEffect(() => { fetchMyProfile().then((profile) => setRole(profile?.role || "cliente")); }, []);
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
 
   const navigate = (route: string) => router.replace(route as never);
   const active = (route: string) =>
@@ -44,7 +51,7 @@ export function AdminShell({ title, subtitle, children, action }: Props) {
 
   const nav = (
     <>
-      {NAV_ITEMS.map((item) => {
+      {visibleNavItems.map((item) => {
         const selected = active(item.route);
         return (
           <Pressable
@@ -77,7 +84,7 @@ export function AdminShell({ title, subtitle, children, action }: Props) {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {desktop ? (
+      {desktop && !insideMainTabs ? (
         <View
           style={[
             styles.sidebar,
@@ -125,12 +132,12 @@ export function AdminShell({ title, subtitle, children, action }: Props) {
           </View>
           {action}
         </View>
-        <View style={[styles.content, !desktop && { paddingBottom: insets.bottom + 76 }]}>
+        <View style={[styles.content, (insideMainTabs || !desktop) && { paddingBottom: insets.bottom + 84 }]}>
           {children}
         </View>
       </View>
 
-      {!desktop ? (
+      {!desktop && !insideMainTabs ? (
         <View
           style={[
             styles.bottomBar,
@@ -174,4 +181,3 @@ const styles = StyleSheet.create({
   bottomItem: { width: 82, paddingVertical: 6, borderRadius: 10, alignItems: "center", gap: 3 },
   bottomLabel: { fontFamily: "Inter_600SemiBold", fontSize: 9 },
 });
-

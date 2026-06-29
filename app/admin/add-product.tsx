@@ -5,7 +5,8 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   StatusBar,
   StyleSheet,
   Switch,
@@ -20,6 +21,7 @@ import { APP_LIMITS } from "@/constants/limits";
 import { supabase } from "@/lib/supabase";
 import { Category } from "@/data/products";
 import { useColors } from "@/hooks/useColors";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 
 const LOG_PREFIX = "[AddProduct]";
 
@@ -266,7 +268,8 @@ export default function AddProductScreen() {
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAwareScrollViewCompat showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]} bottomOffset={24} keyboardDismissMode="interactive">
         
         {/* Nombre */}
         <View style={styles.inputGroup}>
@@ -393,7 +396,8 @@ export default function AddProductScreen() {
           {submitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitBtnText}>Publicar Producto</Text>}
         </Pressable>
         
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
+      </KeyboardAvoidingView>
     </View>
   );
 }

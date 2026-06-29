@@ -8,6 +8,8 @@ export type InventoryMovement = {
   movement_type: string;
   quantity: number;
   reason: string | null;
+  taken_by?: string | null;
+  note?: string | null;
   created_at: string;
 };
 

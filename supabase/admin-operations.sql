@@ -58,12 +58,22 @@ CREATE TABLE IF NOT EXISTS public.inventory_movements (
   movement_type text NOT NULL,
   quantity integer NOT NULL,
   reason text,
+  taken_by text,
+  note text,
   created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL DEFAULT auth.uid(),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS min_stock integer NOT NULL DEFAULT 5;
-ALTER TABLE public.leads_tracking ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.inventory_movements ADD COLUMN IF NOT EXISTS taken_by text;
+ALTER TABLE public.inventory_movements ADD COLUMN IF NOT EXISTS note text;
+DO $$
+BEGIN
+  IF to_regclass('public.leads_tracking') IS NOT NULL THEN
+    ALTER TABLE public.leads_tracking ADD COLUMN IF NOT EXISTS notes text;
+  END IF;
+END;
+$$;
 
 CREATE INDEX IF NOT EXISTS admin_notes_updated_idx ON public.admin_notes(updated_at DESC);
 CREATE INDEX IF NOT EXISTS admin_events_date_idx ON public.admin_events(event_date, event_time);
@@ -121,4 +131,3 @@ CREATE POLICY "inventory_movements_staff_all" ON public.inventory_movements
 FOR ALL TO authenticated
 USING (public.auth_is_operations_staff())
 WITH CHECK (public.auth_is_operations_staff());
-

@@ -33,6 +33,10 @@ export function isStaffRole(role: AppRole | string): boolean {
   return r === "admin" || r === "staff" || r === "vendedor" || r === "instalador";
 }
 
+export function isAdminRole(role: AppRole | string): boolean {
+  return normalizeRole(typeof role === "string" ? role : role) === "admin";
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

@@ -20,10 +20,10 @@ type Action = {
 };
 
 const ACTIONS: Action[] = [
-  { icon: "package", label: "Agregar pasto", sub: "Nuevo producto al catálogo", route: "/admin/add-product" },
-  { icon: "user-plus", label: "Agregar vendedor", sub: "Crear o promover cuenta", route: "/admin/add-vendor", adminOnly: true },
-  { icon: "gift", label: "Enviar promoción", sub: "Notificar a todos los clientes", route: "/admin/send-promo", adminOnly: true },
-  { icon: "tool", label: "Mantenimiento", sub: "Solicitudes y registros", route: "/admin/maintenance" },
+  { icon: "package", label: "Agregar pasto", sub: "Nuevo producto al catálogo", route: "/add-product" },
+  { icon: "user-plus", label: "Agregar colaborador", sub: "Crear o promover cuenta", route: "/team", adminOnly: true },
+  { icon: "gift", label: "Enviar promoción", sub: "Notificar a todos los clientes", route: "/send-promo", adminOnly: true },
+  { icon: "tool", label: "Mantenimiento", sub: "Solicitudes y registros", route: "/admin-maintenance" },
 ];
 
 export function AdminQuickActionsModal({ visible, isAdmin, onClose }: Props) {
